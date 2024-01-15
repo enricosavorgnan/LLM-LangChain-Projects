@@ -15,7 +15,7 @@ from langchain_community.document_loaders import TextLoader
 from langchain_community.llms import OpenAI
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
-
+  
 # ------------------------------------------------------------------- #
 # Initialising the environment where to move. Need an OpenAI API key  #
 # ------------------------------------------------------------------- #
@@ -24,29 +24,43 @@ from langchain_openai import OpenAIEmbeddings
 openai_key = '      your_openai_api_key_goes_here      '
 os.environ["OPENAI_API_KEY"] = openai_key
 
-#initialising the file
-file = input('Your file path: ')
-loader = TextLoader(file)
-text = loader.load()
 
-#chunking file into 200-words long chunks
-embeddings = OpenAIEmbeddings()
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size = 200,
-    chunk_overlap = 20)
-chunks = splitter.split_documents(text)
+def create_vector_db(file_path: str) -> FAISS:
 
-#sending chunks to FAISS
-index_vector = FAISS.from_documents(chunks, embeddings)
+    loader = TextLoader(file)
+    text = loader.load()
+
+    embeddings = OpenAIEmbeddings()
+        #chunking file into 200-words long chunks
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size = 200,
+        chunk_overlap = 20)
+    chunks = splitter.split_documents(text)
+
+    return FAISS.from_documents(chunks, embeddings)
+        #sending chunks to FAISS
+
 
 
 # -------------------------------------------------------------------- #
 # Now start working with LLM, langchain and the chunked file           #
 # -------------------------------------------------------------------  #
+def get_response(database_file):
+    llm = OpenAI (temperature = 0.8, max_tokens = 500)
+    chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=database_file.as_retriever())
+    query = str(input('Your query: '))
 
-llm = OpenAI (temperature = 0.8, max_tokens = 500)
-chain = RetrievalQAWithSourcesChain.from_llm(llm=llm, retriever=index_vector.as_retriever())
-query = str(input('Your query: '))
+    response = []
+    response = chain({'question': query})
 
-response = []
-response = chain({'question': query})
+    return response
+
+
+
+
+
+
+file = input('Your file path: ')
+database_file = create_vector_db(file)
+get_response(database_file=database_file)
